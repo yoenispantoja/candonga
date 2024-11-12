@@ -1,7 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Product } from '../models/product.model';
 
-
 interface CartItem extends Product {
   quantity: number;
 }
