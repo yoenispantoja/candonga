@@ -8,7 +8,7 @@
         "nombre": "Granma",
         "abreviatura": "GRA",
         "nombreCompleto": "Alazanes",
-        "runs": 5
+        "runs": 8
       },
       "equipo2": {
         "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/PRI.png",
@@ -17,7 +17,7 @@
         "nombreCompleto": "Vegueros",
         "runs": 2
       },
-      "estadoDelJuego": " Baja 4to "
+      "estadoDelJuego": " Baja 6to "
     },
     {
       "equipo1": {
@@ -25,7 +25,7 @@
         "nombre": "Santiago De Cuba",
         "abreviatura": "SCU",
         "nombreCompleto": "Avispas",
-        "runs": 0
+        "runs": 3
       },
       "equipo2": {
         "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/CAV.png",
