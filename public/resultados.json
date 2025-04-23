@@ -1,0 +1,57 @@
+{
+  "Fecha": "21/abril/2025",
+  "CantidadDeJuegos": 3,
+  "Juegos": [
+    {
+      "equipo1": {
+        "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/GRA.png",
+        "nombre": "Granma",
+        "abreviatura": "GRA",
+        "nombreCompleto": "Alazanes",
+        "runs": 0
+      },
+      "equipo2": {
+        "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/PRI.png",
+        "nombre": "Pinar del Río",
+        "abreviatura": "PRI",
+        "nombreCompleto": "Vegueros",
+        "runs": 0
+      },
+      "estadoDelJuego": " Baja 2do "
+    },
+    {
+      "equipo1": {
+        "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/SCU.png",
+        "nombre": "Santiago De Cuba",
+        "abreviatura": "SCU",
+        "nombreCompleto": "Avispas",
+        "runs": 0
+      },
+      "equipo2": {
+        "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/CAV.png",
+        "nombre": "Ciego de Avila",
+        "abreviatura": "CAV",
+        "nombreCompleto": "Tigres",
+        "runs": 0
+      },
+      "estadoDelJuego": " Baja 1ra "
+    },
+    {
+      "equipo1": {
+        "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/IND.png",
+        "nombre": "Industriales",
+        "abreviatura": "IND",
+        "nombreCompleto": "Leones",
+        "runs": 0
+      },
+      "equipo2": {
+        "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/LTU.png",
+        "nombre": "Las Tunas",
+        "abreviatura": "LTU",
+        "nombreCompleto": "Leñadores",
+        "runs": 0
+      },
+      "estadoDelJuego": " Baja 2do "
+    }
+  ]
+}
