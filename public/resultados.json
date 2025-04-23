@@ -8,16 +8,16 @@
         "nombre": "Granma",
         "abreviatura": "GRA",
         "nombreCompleto": "Alazanes",
-        "runs": 0
+        "runs": 5
       },
       "equipo2": {
         "logo": "https://www.beisbolcubano.cu/images/logos/45%20x%2045/PRI.png",
         "nombre": "Pinar del Río",
         "abreviatura": "PRI",
         "nombreCompleto": "Vegueros",
-        "runs": 0
+        "runs": 2
       },
-      "estadoDelJuego": " Baja 2do "
+      "estadoDelJuego": " Baja 4to "
     },
     {
       "equipo1": {
