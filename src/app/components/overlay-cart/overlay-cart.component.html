@@ -1,0 +1,60 @@
+<p-overlayPanel #op [showCloseIcon]="true" [dismissable]="true" styleClass="shadow-lg rounded-lg">
+  <ng-template pTemplate>
+    <div class="min-w-[300px] max-w-[90vw] p-4 text-sm text-gray-800">
+      <h3 class="text-base font-bold mb-4">Tu selección</h3>
+
+      <!-- Carrito vacío -->
+      <div *ngIf="cart().length === 0" class="py-4 text-center text-gray-500 text-sm">
+        Tu lista de productos está vacía.
+      </div>
+
+      <!-- Lista de productos -->
+      <div *ngIf="cart().length > 0" class="max-h-[300px] overflow-y-auto pr-2">
+        <div class="mb-4 pb-2 border-b border-gray-200" *ngFor="let item of cart()">
+          <div class="flex gap-3 items-start">
+            <!-- Imagen -->
+            <img [src]="item.imagenDestacada" alt="{{ item.nombre }}"
+                 class="w-12 h-12 object-cover rounded border shadow-sm" />
+
+            <!-- Info -->
+            <div class="flex-1">
+              <!-- Nombre y botón eliminar -->
+              <div class="flex justify-between items-start">
+                <span class="font-medium text-sm">{{ item.nombre }}</span>
+                <button (click)="removeItem(item)" class="text-gray-400 hover:text-red-500 transition-colors text-xs mt-0.5">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+
+              <!-- Precio y cantidad -->
+              <div class="flex justify-between mt-1 text-xs text-gray-500">
+                <span>Cantidad: {{ item.quantity }}</span>
+                <span class="text-gray-700">{{ item.precio | currency }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- Total -->
+      <div class="text-right text-base my-4">
+        <strong>Total:</strong> {{ totalAmount() | currency }}
+      </div>
+
+      <!-- Botones -->
+      <div class="flex justify-between gap-2 text-xs">
+        <button pButton icon="pi pi-whatsapp" label="¡Resérvalos!"
+                class="p-button-success bg-green-500 hover:bg-green-600 text-slate-200 p-2"
+                (click)="sendToWhatsApp()">
+        </button>
+
+        <button pButton icon="pi pi-trash" label="Vaciar"
+                class="p-button-danger bg-red-500 hover:bg-red-600 text-slate-200 p-2"
+                (click)="clearCart()">
+        </button>
+      </div>
+    </div>
+  </ng-template>
+</p-overlayPanel>

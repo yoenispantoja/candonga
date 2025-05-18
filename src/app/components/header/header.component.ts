@@ -1,16 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
+import { CartOverlayComponent } from '../overlay-cart/overlay-cart.component';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss'],
-  standalone: true
+  standalone: true,
+  imports: [CommonModule, CartOverlayComponent],
 })
-export class HeaderComponent implements OnInit {
-
-  constructor() { }
-
-  ngOnInit() {
-  }
-
+export class HeaderComponent {
+  @ViewChild('cartOverlay') cartOverlay!: CartOverlayComponent;
 }

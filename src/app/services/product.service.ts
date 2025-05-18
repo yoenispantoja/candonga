@@ -1,113 +1,88 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Product, Gallery, GalleryImage } from '../models/product.model';
-import { environment } from '../../environments/environment.prod';
+import { environment } from '../../environments/environment';
 import { tap, catchError, switchMap, map } from 'rxjs/operators';
-import { of, Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+
+interface ProductFilters {
+  name: string;
+  minPrice: number;
+  maxPrice: number;
+  category: string;
+  todoPorUno: number | null;
+}
+
+interface ServiceState {
+  loading: boolean;
+  error: string | null;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class ProductService {
-  private products = signal<Product[]>([]);
-  private loading = signal<boolean>(false);
-  private error = signal<string | null>(null);
-  private galleryCache = new Map<number, Gallery>();
+  // Private state
+  private readonly state = signal<ServiceState>({
+    loading: false,
+    error: null,
+  });
 
-  BASE_URL = environment.apiUrl;
-  IMAGES_URL = environment.imagesUrl || this.BASE_URL; // Asegúrate de tener esto en environment
-  urlProducts = `${this.BASE_URL}/producto?aplicacionId=${environment.aplicacionId}`;
-  urlGallery = (galleryId: number) =>
+  private readonly products = signal<Product[]>([]);
+  private readonly galleryCache = new Map<number, Gallery>();
+
+  // Public selectors
+  readonly productsList = this.products.asReadonly();
+  readonly loading = computed(() => this.state().loading);
+  readonly error = computed(() => this.state().error);
+  readonly categories = computed(() => [
+    ...new Set(this.products().map((p) => p.categoria)),
+  ]);
+
+  // API endpoints
+  private readonly BASE_URL = environment.apiUrl;
+  private readonly IMAGES_URL = environment.imagesUrl || this.BASE_URL;
+  private readonly productsEndpoint = `${this.BASE_URL}/producto?aplicacionId=${environment.aplicacionId}`;
+  private readonly galleryEndpoint = (galleryId: number) =>
     `${this.BASE_URL}/galeria/${galleryId}`;
 
   constructor(private http: HttpClient) {
     this.loadProducts();
   }
 
-  // Carga todos los productos
-  loadProducts() {
-    this.loading.set(true);
-    this.error.set(null);
+  // Public API
+  loadProducts(): void {
+    this.updateState({ loading: true, error: null });
 
     this.http
-      .get<Product[]>(this.urlProducts)
+      .get<{ items: Product[] }>(this.productsEndpoint)
       .pipe(
-        tap((products: any) => {
-          // preparar imagenDestacada con URL completa
-          products.items = products.items.map((product: Product) => {
-            return {
-              ...product,
-              imagenDestacada: `${this.IMAGES_URL}/productos/${product.id}/${product.imagenDestacada}`,
-            };
-          });
-          this.products.set(products.items);
-          this.loading.set(false);
+        map((response) => this.mapProductImages(response.items)),
+        tap((products) => {
+          this.products.set(products);
+          this.updateState({ loading: false });
         }),
-        catchError((err) => {
-          this.error.set('Error al cargar los productos');
-          this.loading.set(false);
-          console.error('Error loading products:', err);
-          return of([]);
-        })
+        catchError((error) =>
+          this.handleError('Error al cargar los productos', error)
+        )
       )
       .subscribe();
   }
 
-  // Obtiene la galería completa con sus imágenes
-  getGallery(galleryId: number): Observable<Gallery> {
-    if (this.galleryCache.has(galleryId)) {
-      return of(this.galleryCache.get(galleryId)!);
-    }
-
-    return this.http.get<Gallery>(this.urlGallery(galleryId)).pipe(
-      map((gallery) => ({
-        ...gallery,
-        imagenes: gallery.imagenes.map((image) => ({
-          ...image,
-          url: `${this.IMAGES_URL}/galerias/${galleryId}/${image.nombreImagen}`, // Construye la URL completa
-        })),
-      })),
-      tap((gallery) => {
-        console.log(gallery);
-        this.galleryCache.set(galleryId, gallery);
-      }),
-      catchError((err) => {
-        console.error('Error loading gallery:', err);
-        return of({
-          id: galleryId,
-          nombre: 'Galería no disponible',
-          imagenPortada: '',
-          descripcion: '',
-          created_at: '',
-          updated_at: '',
-          deleted_at: null,
-          usuarioId: 0,
-          estadoId: 0,
-          aplicacionId: 0,
-          estado: {
-            id: 0,
-            nombre: 'Error',
-            descripcion: 'No se pudo cargar la galería',
-            created_at: '',
-            updated_at: '',
-            deleted_at: null,
-          },
-          imagenes: [],
-        });
-      })
-    );
+  getProductById(id: number): Product | undefined {
+    return this.products().find((p) => p.id === id);
   }
 
-  // Obtiene solo las imágenes de una galería con URLs completas
   getGalleryImages(galleryId: number): Observable<GalleryImage[]> {
     return this.getGallery(galleryId).pipe(map((gallery) => gallery.imagenes));
   }
 
-  // Obtiene un producto con su galería completa
-  getProductWithGallery(
-    productId: number
-  ): Observable<{ product: Product | undefined; gallery: Gallery }> {
-    const product = this.products().find((p) => p.id === productId);
+  getProductWithGallery(productId: number): Observable<{
+    product: Product | undefined;
+    gallery: Gallery;
+  }> {
+    const product = this.getProductById(productId);
+
     if (!product) {
       return of({
         product: undefined,
@@ -127,10 +102,71 @@ export class ProductService {
     );
   }
 
-  private createEmptyGallery(nombre: string = ''): Gallery {
+  filterProducts(filters: Partial<ProductFilters>): Product[] {
+    const products = this.products();
+
+    if (!Array.isArray(products)) {
+      console.error('Products is not an array:', products);
+      return [];
+    }
+
+    return products.filter((product) => {
+      return this.matchesAllFilters(product, filters);
+    });
+  }
+
+  updateProduct(updatedProduct: Product): void {
+    this.products.update((products) =>
+      products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
+  }
+
+  addProduct(newProduct: Product): void {
+    this.products.update((products) => [...products, newProduct]);
+  }
+
+  // Private methods
+  private getGallery(galleryId: number): Observable<Gallery> {
+    if (this.galleryCache.has(galleryId)) {
+      return of(this.galleryCache.get(galleryId)!);
+    }
+
+    return this.http.get<Gallery>(this.galleryEndpoint(galleryId)).pipe(
+      map((gallery) => this.mapGalleryImages(galleryId, gallery)),
+      tap((gallery) => this.galleryCache.set(galleryId, gallery)),
+      catchError((error) => this.handleGalleryError(galleryId, error))
+    );
+  }
+
+  private mapProductImages(products: Product[]): Product[] {
+    return products.map((product) => ({
+      ...product,
+      imagenDestacada: this.getFullImageUrl(
+        `productos/${product.id}/${product.imagenDestacada}`
+      ),
+    }));
+  }
+
+  private mapGalleryImages(galleryId: number, gallery: Gallery): Gallery {
+    return {
+      ...gallery,
+      imagenes: gallery.imagenes.map((image) => ({
+        ...image,
+        url: this.getFullImageUrl(
+          `galerias/${galleryId}/${image.nombreImagen}`
+        ),
+      })),
+    };
+  }
+
+  private getFullImageUrl(path: string): string {
+    return `${this.IMAGES_URL}/${path}`;
+  }
+
+  private createEmptyGallery(name: string = ''): Gallery {
     return {
       id: 0,
-      nombre: nombre ? `Galería de ${nombre}` : 'Galería vacía',
+      nombre: name ? `Galería de ${name}` : 'Galería vacía',
       imagenPortada: '',
       descripcion: '',
       created_at: '',
@@ -151,59 +187,53 @@ export class ProductService {
     };
   }
 
-  // Métodos existentes (se mantienen igual)
-  getProducts() {
-    return this.products.asReadonly();
+  private matchesAllFilters(
+    product: Product,
+    filters: Partial<ProductFilters>
+  ): boolean {
+    const nameMatch =
+      !filters.name ||
+      product.nombre.toLowerCase().includes(filters.name.toLowerCase());
+
+    const priceMatch =
+      (filters.minPrice === undefined || product.precio >= filters.minPrice) &&
+      (filters.maxPrice === undefined || product.precio <= filters.maxPrice);
+
+    const categoryMatch =
+      !filters.category || product.categoria === filters.category;
+
+    const todoPorUnoMatch =
+      !filters.todoPorUno || parseFloat(product.precio.toString()) === filters.todoPorUno;
+    return nameMatch && priceMatch && categoryMatch && todoPorUnoMatch;
   }
 
-  getProductById(id: number) {
-    return this.products().find((p) => p.id === id);
+  private updateState(partialState: Partial<ServiceState>): void {
+    this.state.update((current) => ({ ...current, ...partialState }));
   }
 
-  get isLoading() {
-    return this.loading.asReadonly();
-  }
-
-  get hasError() {
-    return this.error.asReadonly();
-  }
-
-  categories = computed(() => {
-    return [...new Set(this.products().map((p) => p.categoria))];
-  });
-
-  filterProducts(filters: {
-    name: string;
-    minPrice: number;
-    maxPrice: number;
-    category: string;
-  }): Product[] {
-    const products = this.products(); // Get the current value of the signal
-    if (!Array.isArray(products)) {
-      console.error('Products is not an array:', products);
-      return []; // Return an empty array if products is not valid
-    }
-    return this.products().filter((product) => {
-      const matchesName =
-        filters.name === '' ||
-        product.nombre.toLowerCase().includes(filters.name.toLowerCase());
-      const matchesPrice =
-        product.precio >= filters.minPrice &&
-        product.precio <= filters.maxPrice;
-      const matchesCategory =
-        filters.category === '' || product.categoria === filters.category;
-
-      return matchesName && matchesPrice && matchesCategory;
+  private handleError(message: string, error: any): Observable<never> {
+    console.error(message, error);
+    this.updateState({
+      loading: false,
+      error: message,
     });
+    return of();
   }
 
-  updateProduct(updatedProduct: Product) {
-    this.products.update((products) =>
-      products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+  private handleGalleryError(
+    galleryId: number,
+    error: any
+  ): Observable<Gallery> {
+    console.error(`Error loading gallery ${galleryId}:`, error);
+    return of(this.createEmptyGallery());
+  }
+
+  updateStock(productId: number, quantity: number) {
+    this.products.update(products =>
+      products.map(p =>
+        //change estadoId to 2
+        p.id === productId ? { ...p, estadoId: 2 } : p
+      )
     );
-  }
-
-  addProduct(newProduct: Product) {
-    this.products.update((products) => [...products, newProduct]);
   }
 }

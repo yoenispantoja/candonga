@@ -13,6 +13,9 @@ import { lastValueFrom, Subscription, take } from 'rxjs';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { CommonModule } from '@angular/common';
 import { PaginatorModule } from 'primeng/paginator';
+import { CartService } from '../../services/cart.service';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 
 type Filters = {
   name: string;
@@ -20,6 +23,7 @@ type Filters = {
   category: string;
   priceRange: [number, number];
   sortBy: string;
+  todoPorUno: number | null;
 };
 
 interface Categoria {
@@ -42,17 +46,20 @@ interface Categoria {
     ProgressSpinnerModule,
     SliderModule,
     PaginatorModule,
+    ToastModule,
   ],
   templateUrl: './product-list.component.html',
-  styleUrls: ['./product-list.component.css'],
-  providers: [LightboxConfig],
+  styleUrls: ['./product-list.component.scss'],
+  providers: [LightboxConfig, MessageService],
 })
 export class ProductListComponent {
   private productService = inject(ProductService);
   private lightbox = inject(Lightbox);
   private lightboxEvent = inject(LightboxEvent);
   private lightboxConfig = inject(LightboxConfig);
+  private cartService = inject(CartService);
   private subscription!: Subscription;
+  private messageService = inject(MessageService);
 
   categories: Categoria[] = [];
   loading = signal<boolean>(false);
@@ -62,12 +69,20 @@ export class ProductListComponent {
     { label: 'Precio: mayor a menor', value: 'price-desc' },
   ];
 
+  todoPorUnoOptions = [
+    { label: '100', value: 100 },
+    { label: '300', value: 300 },
+    { label: '500', value: 500 },
+    { label: '1000', value: 1000 },
+  ];
+
   filters = signal<Filters>({
     name: '',
     status: '',
     category: '',
     priceRange: [0, 20000] as [number, number],
     sortBy: '',
+    todoPorUno: null,
   });
 
   products = signal<Product[]>([]);
@@ -115,13 +130,15 @@ export class ProductListComponent {
             valor: category,
           });
         });
-        const { name, status, category, priceRange, sortBy } = this.filters();
+        const { name, category, priceRange, sortBy, todoPorUno } =
+          this.filters();
 
         let filtered = this.productService.filterProducts({
           name,
           minPrice: priceRange[0],
           maxPrice: priceRange[1],
           category,
+          todoPorUno,
         });
 
         if (sortBy === 'price-asc') {
@@ -177,6 +194,7 @@ export class ProductListComponent {
       category: '',
       priceRange: [0, 10000] as [number, number],
       sortBy: '',
+      todoPorUno: null,
     });
   }
 
@@ -231,5 +249,16 @@ export class ProductListComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  addToCart(product: Product) {
+    this.cartService.addToCart(product);
+    this.productService.updateStock(product.id, 1);
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Vamo arriba!',
+      detail: 'Añadito a tu lista de deseos',
+    });
   }
 }
